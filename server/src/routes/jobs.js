@@ -1,17 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const { listJobs, getJobById, deleteJob } = require('../db/database');
+const { listJobs, getJobById, deleteJob, clearUserJobs } = require('../db/database');
 const { verifyToken } = require('./auth');
 const supabaseService = require('../services/supabaseService');
 
+// GET history - ONLY for specific authenticated logged-in user
 router.get('/', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     const decoded = verifyToken(token);
-    const userId = decoded ? decoded.id : (req.query.userId || null);
+    const userId = decoded ? decoded.id : null;
 
-    // 1. Try Supabase history
+    // Strict privacy requirement: Only show history when logged in for that specific user
+    if (!userId) {
+      return res.json({ jobs: [], total: 0, requireLogin: true });
+    }
+
+    // 1. Try Supabase history for this specific user
     if (supabaseService.isConfigured()) {
       try {
         const sbHistory = await supabaseService.getUserHistory(userId);
@@ -39,7 +45,7 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // 2. Fallback to local SQLite
+    // 2. Fallback to local SQLite strictly for this user
     const { search, algorithm, status, sortBy, sortOrder, limit, offset } = req.query;
     const data = listJobs({
       userId,
@@ -57,6 +63,30 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Clear all history for the logged-in user
+router.delete('/clear/all', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const decoded = verifyToken(token);
+    const userId = decoded ? decoded.id : null;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Please log in to clear your history' });
+    }
+
+    if (supabaseService.isConfigured()) {
+      await supabaseService.clearUserHistory(userId);
+    }
+
+    clearUserJobs(userId);
+    res.json({ success: true, message: 'All history cleared successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a single history job
 router.delete('/:id', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;

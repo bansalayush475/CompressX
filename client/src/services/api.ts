@@ -176,6 +176,17 @@ export const api = {
     if (!res.ok) throw new Error('Failed to delete job');
   },
 
+  async clearAllHistory(): Promise<void> {
+    const res = await fetch(`${API_BASE}/jobs/clear/all`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to clear history');
+    }
+  },
+
   getExportCsvUrl(): string {
     return `${API_BASE}/jobs/export/csv`;
   }

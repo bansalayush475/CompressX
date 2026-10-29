@@ -141,6 +141,28 @@ function deleteJob(id) {
   return job;
 }
 
+function clearUserJobs(userId) {
+  let jobsToDelete;
+  if (userId) {
+    jobsToDelete = db.prepare(`SELECT * FROM jobs WHERE user_id = ?`).all(userId);
+    db.prepare(`DELETE FROM jobs WHERE user_id = ?`).run(userId);
+  } else {
+    jobsToDelete = db.prepare(`SELECT * FROM jobs`).all();
+    db.prepare(`DELETE FROM jobs`).run();
+  }
+
+  for (const job of jobsToDelete) {
+    if (job.artifact_path && fs.existsSync(job.artifact_path)) {
+      try {
+        fs.unlinkSync(job.artifact_path);
+      } catch (e) {
+        console.warn(`Failed to unlink artifact: ${job.artifact_path}`, e);
+      }
+    }
+  }
+  return jobsToDelete.length;
+}
+
 function listJobs({ userId, search, algorithm, status, sortBy = 'created_at', sortOrder = 'DESC', limit = 100, offset = 0 } = {}) {
   let whereClauses = [];
   let params = [];
@@ -194,5 +216,6 @@ module.exports = {
   insertJob,
   getJobById,
   deleteJob,
+  clearUserJobs,
   listJobs
 };

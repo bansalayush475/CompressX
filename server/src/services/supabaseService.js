@@ -159,23 +159,25 @@ async function insertHistoryRow(job) {
 }
 
 /**
- * Fetch user history from Supabase
+ * Fetch user history from Supabase (Strictly for a specific authenticated user)
  */
 async function getUserHistory(userId) {
-  if (!isConfigured()) return null;
+  if (!isConfigured() || !userId || userId === 'guest') return [];
 
   try {
-    let query = supabase.from('history').select('*').order('created_at', { ascending: false });
-    if (userId && userId !== 'guest') {
-      query = query.eq('user_id', userId);
-    }
-    const { data, error } = await query.limit(100);
+    const { data, error } = await supabase
+      .from('history')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
     if (error) {
-      return null;
+      return [];
     }
-    return data;
+    return data || [];
   } catch (err) {
-    return null;
+    return [];
   }
 }
 
@@ -196,6 +198,25 @@ async function deleteHistoryRow(id, userId) {
   }
 }
 
+/**
+ * Clear all history for a specific user (or all if not specified)
+ */
+async function clearUserHistory(userId) {
+  if (!isConfigured()) return false;
+  try {
+    let query = supabase.from('history').delete();
+    if (userId && userId !== 'guest') {
+      query = query.eq('user_id', userId);
+    } else {
+      query = query.neq('id', '00000000-0000-0000-0000-000000000000');
+    }
+    const { error } = await query;
+    return !error;
+  } catch (err) {
+    return false;
+  }
+}
+
 module.exports = {
   isConfigured,
   getConfig,
@@ -204,5 +225,6 @@ module.exports = {
   uploadToStorage,
   insertHistoryRow,
   getUserHistory,
-  deleteHistoryRow
+  deleteHistoryRow,
+  clearUserHistory
 };

@@ -20,7 +20,8 @@ import {
   X,
   ArrowRight,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Lock
 } from 'lucide-react';
 import { api } from './services/api';
 import { AuthModal } from './components/AuthModal';
@@ -52,17 +53,26 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === 'history') {
-      loadHistory();
+      if (user) {
+        loadHistory();
+      } else {
+        setJobs([]);
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   const loadHistory = async () => {
+    if (!user) {
+      setJobs([]);
+      return;
+    }
     setLoadingHistory(true);
     try {
       const data = await api.getJobs();
-      setJobs(data.jobs);
+      setJobs(data.jobs || []);
     } catch (e) {
       console.error(e);
+      setJobs([]);
     } finally {
       setLoadingHistory(false);
     }
@@ -72,7 +82,17 @@ export const App: React.FC = () => {
     localStorage.removeItem('compressx_token');
     localStorage.removeItem('compressx_user');
     setUser(null);
-    if (activeTab === 'history') loadHistory();
+    setJobs([]);
+  };
+
+  const handleClearAllHistory = async () => {
+    if (!confirm('Are you sure you want to clear your entire compression history? This will permanently delete all your file records.')) return;
+    try {
+      await api.clearAllHistory();
+      setJobs([]);
+    } catch (e: any) {
+      alert(`Failed to clear history: ${e.message}`);
+    }
   };
 
   const formatBytes = (bytes: number) => {
@@ -222,7 +242,7 @@ export const App: React.FC = () => {
             >
               <History className="w-3.5 h-3.5" />
               <span>History</span>
-              {jobs.length > 0 && (
+              {user && jobs.length > 0 && (
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
                   {jobs.length}
                 </span>
@@ -585,97 +605,139 @@ export const App: React.FC = () => {
         {/* HISTORY WORKSPACE */}
         {activeTab === 'history' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Your Compressed Files</h2>
-                <p className="text-xs text-slate-400">Files stored in Supabase cloud and ready for instant download.</p>
-              </div>
-              <button
-                onClick={loadHistory}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#121622] hover:bg-[#1a2030] text-slate-300 text-xs border border-[#212638] transition"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Refresh</span>
-              </button>
-            </div>
-
-            {loadingHistory ? (
-              <div className="text-center py-12">
-                <div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-2" />
-                <span className="text-xs text-slate-400">Loading history...</span>
-              </div>
-            ) : jobs.length === 0 ? (
-              <div className="text-center py-12 bg-[#0c0e17] border border-dashed border-[#1e2434] rounded-3xl p-8 space-y-3">
-                <FileText className="w-8 h-8 text-slate-600 mx-auto" />
-                <p className="text-sm font-semibold text-slate-300">No compressed files yet</p>
-                <p className="text-xs text-slate-500">Compress your first file to see it here.</p>
+            {!user ? (
+              /* Privacy Login Gate */
+              <div className="text-center py-16 bg-[#0c0e17] border border-[#1e2434] rounded-3xl p-8 space-y-4 max-w-md mx-auto shadow-xl">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/20 shadow-inner">
+                  <Lock className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Sign In to View History</h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    Compression history is strictly private and tied to your account. Sign in to access your previous files and cloud downloads.
+                  </p>
+                </div>
                 <button
-                  onClick={() => setActiveTab('compress')}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold text-xs"
+                  onClick={() => setAuthModalOpen(true)}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 via-emerald-400 to-emerald-500 hover:from-teal-400 hover:to-emerald-300 text-black font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition cursor-pointer"
                 >
-                  Compress a file
+                  Sign In / Create Account
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {jobs.map((job) => {
-                  const ext = job.original_filename.substring(job.original_filename.lastIndexOf('.'));
-                  const base = job.original_filename.substring(0, job.original_filename.lastIndexOf('.'));
-                  const dlName = `${base}_compressed${ext}`;
-                  const dlUrl = job.artifact_path?.startsWith('http')
-                    ? job.artifact_path
-                    : `/api/files/${job.id}_compressed${ext}/download?downloadName=${encodeURIComponent(dlName)}`;
-                  const info = getFileInfo(job.original_filename);
-                  const IconComp = info.icon;
+              /* Authenticated User History */
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                      <span>Your Compressed Files</span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                        {user.username}
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-400">Files stored in Supabase cloud and ready for instant download.</p>
+                  </div>
 
-                  return (
-                    <div
-                      key={job.id}
-                      className="p-4 rounded-2xl bg-[#0c0e17] border border-[#1e2434] flex items-center justify-between gap-4 hover:border-emerald-500/40 transition shadow-sm"
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {jobs.length > 0 && (
+                      <button
+                        onClick={handleClearAllHistory}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold border border-red-500/20 transition cursor-pointer"
+                        title="Clear all history records"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Clear History</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={loadHistory}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#121622] hover:bg-[#1a2030] text-slate-300 text-xs border border-[#212638] transition cursor-pointer"
                     >
-                      <div className="flex items-center gap-3.5 truncate">
-                        <div className={`w-10 h-10 rounded-xl ${info.bg} ${info.border} border flex items-center justify-center shrink-0`}>
-                          <IconComp className={`w-4 h-4 ${info.color}`} />
-                        </div>
-                        <div className="truncate">
-                          <h4 className="text-sm font-semibold text-white truncate max-w-xs md:max-w-md">
-                            {job.original_filename}
-                          </h4>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {formatBytes(job.original_size)} → <span className="text-emerald-400 font-semibold">{formatBytes(job.result_size)}</span>
-                            {job.space_saved > 0 && (
-                              <span className="text-emerald-400 font-semibold ml-1.5">
-                                (-{job.space_saved_percentage.toFixed(0)}%)
-                              </span>
-                            )}{' '}
-                            • <span className="text-slate-500">{new Date(job.created_at).toLocaleDateString()}</span>
-                          </p>
-                        </div>
-                      </div>
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
+                </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <a
-                          href={dlUrl}
-                          download
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black text-xs font-bold transition shadow-sm shadow-emerald-500/20"
+                {loadingHistory ? (
+                  <div className="text-center py-12">
+                    <div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-2" />
+                    <span className="text-xs text-slate-400">Loading your history...</span>
+                  </div>
+                ) : jobs.length === 0 ? (
+                  <div className="text-center py-12 bg-[#0c0e17] border border-dashed border-[#1e2434] rounded-3xl p-8 space-y-3">
+                    <FileText className="w-8 h-8 text-slate-600 mx-auto" />
+                    <p className="text-sm font-semibold text-slate-300">No compressed files yet for {user.username}</p>
+                    <p className="text-xs text-slate-500">Compress your first file to see it here.</p>
+                    <button
+                      onClick={() => setActiveTab('compress')}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold text-xs cursor-pointer"
+                    >
+                      Compress a file
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {jobs.map((job) => {
+                      const ext = job.original_filename.substring(job.original_filename.lastIndexOf('.'));
+                      const base = job.original_filename.substring(0, job.original_filename.lastIndexOf('.'));
+                      const dlName = `${base}_compressed${ext}`;
+                      const dlUrl = job.artifact_path?.startsWith('http')
+                        ? job.artifact_path
+                        : `/api/files/${job.id}_compressed${ext}/download?downloadName=${encodeURIComponent(dlName)}`;
+                      const info = getFileInfo(job.original_filename);
+                      const IconComp = info.icon;
+
+                      return (
+                        <div
+                          key={job.id}
+                          className="p-4 rounded-2xl bg-[#0c0e17] border border-[#1e2434] flex items-center justify-between gap-4 hover:border-emerald-500/40 transition shadow-sm"
                         >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Download</span>
-                        </a>
-                        <button
-                          onClick={() => handleDeleteJob(job.id)}
-                          className="p-1.5 rounded-xl text-slate-500 hover:text-red-400 hover:bg-[#141824] transition"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                          <div className="flex items-center gap-3.5 truncate">
+                            <div className={`w-10 h-10 rounded-xl ${info.bg} ${info.border} border flex items-center justify-center shrink-0`}>
+                              <IconComp className={`w-4 h-4 ${info.color}`} />
+                            </div>
+                            <div className="truncate">
+                              <h4 className="text-sm font-semibold text-white truncate max-w-xs md:max-w-md">
+                                {job.original_filename}
+                              </h4>
+                              <p className="text-xs text-slate-400 mt-0.5">
+                                {formatBytes(job.original_size)} → <span className="text-emerald-400 font-semibold">{formatBytes(job.result_size)}</span>
+                                {job.space_saved > 0 && (
+                                  <span className="text-emerald-400 font-semibold ml-1.5">
+                                    (-{job.space_saved_percentage.toFixed(0)}%)
+                                  </span>
+                                )}{' '}
+                                • <span className="text-slate-500">{new Date(job.created_at).toLocaleDateString()}</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <a
+                              href={dlUrl}
+                              download
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black text-xs font-bold transition shadow-sm shadow-emerald-500/20"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Download</span>
+                            </a>
+                            <button
+                              onClick={() => handleDeleteJob(job.id)}
+                              className="p-1.5 rounded-xl text-slate-500 hover:text-red-400 hover:bg-[#141824] transition cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
