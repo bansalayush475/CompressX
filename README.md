@@ -1,29 +1,61 @@
-# CompressX — Universal File Compression and Decompression System
+# CompressX — Universal File Compression System
 
-> **Tagline:** Compress Anything. Recover Everything.  
-> **Category:** Data Structures and Algorithms (DSA), Binary File Processing, Optimization & Software Engineering  
-> **Core Engine:** C++17 (Native Binary Execution)  
-> **Backend:** Node.js, Express.js, SQLite (`node:sqlite`)  
-> **Frontend:** React 19, TypeScript, Tailwind CSS, Lucide Icons, Recharts  
+> **Tagline:** Maximum Compression. Instant Access. Zero Hassle.  
+> **Core Capabilities:** Format-Preserving Compression (PDF, Images, Office Docs, Code, Data) + Custom C++17 Algorithmic Engine (Huffman / RLE)  
+> **Cloud Backend:** Node.js, Express, Supabase (Cloud Storage & Database), SQLite  
+> **Frontend:** React 19, TypeScript, Tailwind CSS, Cyber Obsidian Palette  
+> **Repository:** [bansalayush475/CompressX](https://github.com/bansalayush475/CompressX)
 
 ---
 
 ## 1. System Overview
 
-**CompressX** is an academic and enterprise-grade file compression, decompression, and algorithm benchmarking suite. Unlike superficial prototypes that display mock data or rely on black-box external utilities, CompressX features a **100% custom C++17 compression engine** built from algorithmic fundamentals.
+**CompressX** is a modern, high-performance file compression platform designed for maximum space reduction while retaining immediate file usability.
 
-CompressX processes **arbitrary binary payloads** regardless of file format or extension—from PDFs, compiled executables, and high-definition video to audio, raw byte streams, and UTF-8 text—guaranteeing **byte-for-byte lossless reconstruction** with cryptographic SHA-256 validation.
+Unlike traditional archivers that require an explicit decompression step to view files, **CompressX delivers direct format-preserving compression**:
+- **Images (PNG, JPG, WebP, GIF, AVIF, TIFF)**: Compress by 50% to 95%+ with adaptive quantization and resolution scaling—retaining the original image extension for direct viewing.
+- **PDF Documents**: Convert ASCII85 streams to binary Flate, quantize vector coordinates, strip redundant catalog tables, and downsample embedded images for massive reductions.
+- **Office Documents (.docx, .xlsx, .pptx)**: Re-deflate internal XML and recompress embedded media streams.
+- **Code & Text (HTML, CSS, JS, JSON, CSV)**: Structural minification, whitespace normalizer, and deduplication.
+- **Native C++17 Core Engine**: Full standalone C++17 binary implementing greedy Huffman Coding, Run-Length Encoding (RLE), and `.cpx` container serialization with SHA-256 validation.
 
 ---
 
-## 2. System Architecture
+## 2. Key Features
+
+### 🎚️ Dynamic Compression Level Bar & Fine-Tune Slider
+- **Unified Glowing Track**: The slider doubles as the visual progress bar, filling up dynamically with an emerald-to-cyan gradient.
+- **Interactive Scale Markers**: Quick-click percentage checkpoints (`15%`, `30%`, `50%`, `70%`, `85%`, `95%`).
+- **Direct Type % Input**: Type any exact reduction target between **10%** and **95%** in the numeric input box.
+- **Real-Time Size Estimation**: Live preview calculating estimated compressed size (e.g. `128 KB → ~19 KB (-85%)`).
+- **5 Progressive Presets**:
+  - **Light (-30%)**: Minimal lossless compression, 100% resolution.
+  - **Balanced (-50%)**: Standard compression, optimal balance.
+  - **High (-70%)**: Web-optimized compression for fast sharing.
+  - **Extra Small (-85%)**: High-efficiency compression for maximum space savings.
+  - **Maximum (-95%)**: Aggressive compression with ultra-compact palette.
+
+### ☁️ Supabase Cloud & Per-User Storage
+- **Isolated User Directories**: Files are uploaded to Supabase Storage (`compressed-files`) partitioned under each user's ID:
+  $$\text{Storage Path} = \texttt{\{user\_id\}/\{timestamp\}\_\{filename\}}$$
+- **Cloud Database History**: Compression telemetry and direct public download links are recorded in the Supabase `history` table.
+- **Ready SQL Configuration**: Standard setup queries provided in `supabase_setup.sql`.
+
+### 🔒 Account Authentication & History Privacy
+- **Native User Experience**: Clean, direct Create Account and Sign In flow without external redirects.
+- **Strict User Isolation**: Users only view their own compressed files.
+- **Clear All History**: One-click history purge removing records from both Supabase and local storage.
+
+---
+
+## 3. System Architecture
 
 ```
 +-------------------------------------------------------------------------+
 |                           CompressX Web UI                              |
-|   (React 19 + TypeScript + Tailwind CSS + Lucide Icons + Recharts)      |
+|              (React 19 + TypeScript + Tailwind CSS + Lucide)            |
 |                                                                         |
-|  [Dashboard]  [Compress]  [Decompress]  [Compare]  [DSA Visualizer] ... |
+|  [Dynamic Level Slider]  [Type % Input]  [File Card]  [User History]    |
 +------------------------------------+------------------------------------+
                                      |
                                HTTP REST APIs
@@ -31,100 +63,65 @@ CompressX processes **arbitrary binary payloads** regardless of file format or e
 +------------------------------------v------------------------------------+
 |                         Node.js Express Server                          |
 |  - Multipart Upload Validation (Multer)                                 |
-|  - Persistent SQLite Job Database (`node:sqlite`)                       |
-|  - Safe Process Orchestrator (`child_process.execFile`)                 |
-+------------------------------------+------------------------------------+
-                                     |
-                         Direct Process Execution
-                                     |
-+------------------------------------v------------------------------------+
-|                      CompressX Native C++ Engine                        |
-|                                                                         |
-|  +-------------------------+  +---------------------------------------+ |
-|  |     Huffman Coding      |  |         Run-Length Encoding           | |
-|  |  - Min-Priority Queue   |  |  - Lossless Packet Control Byte       | |
-|  |  - Binary Prefix Tree   |  |  - Runs: 3 to 130 bytes               | |
-|  |  - Streaming BitWriter  |  |  - Literals: 1 to 128 bytes           | |
-|  +-------------------------+  +---------------------------------------+ |
-|                                                                         |
-|  +-------------------------+  +---------------------------------------+ |
-|  |   Store (Uncompressed)  |  |      Automatic Selection Engine       | |
-|  |  - Baseline Preservation|  |  - Compares complete container sizes  | |
-|  |  - Zero transformation  |  |  - Deterministic tie-breaking         | |
-|  +-------------------------+  +---------------------------------------+ |
-|                                                                         |
-|  +--------------------------------------------------------------------+ |
-|  |             Custom .cpx Binary Container Serializer                | |
-|  |   Magic 'CPX1' | Little-Endian | SHA-256 Cryptographic Checksum    | |
-|  +--------------------------------------------------------------------+ |
-+-------------------------------------------------------------------------+
+|  - Progressive Format Compressor (Sharp, PDF-Lib, AdmZip)               |
+|  - Supabase Cloud Service (Storage + Database)                          |
+|  - Persistent SQLite Fallback (`node:sqlite`)                           |
++------------------+----------------------------------+-------------------+
+                   |                                  |
+                   v                                  v
++----------------------------------+  +-----------------------------------+
+|      Supabase Cloud Platform     |  |    Native C++17 Engine (`.exe`)   |
+|  - Storage: `compressed-files/`  |  |  - Huffman Coding (Min-Heap Tree) |
+|  - Database: `public.history`    |  |  - Run-Length Encoding (RLE)      |
+|  - Per-User Partitioning         |  |  - SHA-256 Container Integrity    |
++----------------------------------+  +-----------------------------------+
 ```
 
 ---
 
-## 3. Core Algorithms Implemented
+## 4. Setup and Execution
 
-### Algorithm A: Huffman Coding (Greedy Min-Heap & Binary Tree)
-1. **Frequency Analysis**: Builds an exact 256-symbol byte frequency distribution in $O(n)$ time.
-2. **Min-Priority Queue**: Inserts all distinct byte frequencies into a min-heap.
-3. **Greedy Node Merging**: Repeatedly extracts the two smallest nodes, creates an internal parent node with their combined weight, and re-inserts into the heap in $O(k \log k)$ time.
-4. **Prefix-Free Code Generation**: Traverses the binary tree assigning `'0'` to left edges and `'1'` to right edges, ensuring the Kraft-McMillan prefix-free condition.
-5. **Bitstream Packing**: Encodes original bytes into variable-length bit codes and packs them into 8-bit bytes using custom `BitWriter` and `BitReader`.
-6. **Edge Case Safety**: Explicitly supports empty files (0 bytes), single-distinct-symbol inputs (e.g. repeated single characters), embedded null bytes (`0x00`), and full 256-byte permutations.
+### Prerequisites
+- **Node.js** v18+ (tested on Node.js v24.20)
+- **MinGW-w64** GCC / Clang with C++17 support (precompiled standalone executables included in `bin/`)
 
-### Algorithm B: Lossless Binary Run-Length Encoding (RLE)
-Uses an unambiguous packet-based control-byte scheme:
-- **Run Packet** (Bit 7 = 1): Header byte `0x80 | (runLen - 3)` followed by 1 byte value. Supports runs from 3 to 130 bytes. Runs $>130$ bytes are cleanly partitioned into contiguous run packets.
-- **Literal Packet** (Bit 7 = 0): Header byte `(litLen - 1)` followed by `litLen` raw literal bytes (1 to 128 bytes).
-- **Zero Ambiguity**: No escape character collisions or byte-stuffing corruptions on arbitrary binary streams.
+### Quick Start (Production Mode)
 
-### Algorithm C: Store Without Compression
-Preserves original bytes within the `.cpx` container structure to provide an uncompressed baseline.
+1. **Install dependencies:**
+   ```powershell
+   cd server && npm install
+   cd ../client && npm install
+   ```
 
-### Algorithm D: Automatic Compression Mode
-Empirically encodes the input using Huffman, RLE, and Store strategies in memory, compares their complete serialized container sizes (including all headers, tree tables, and trailers), and chooses the optimal representation deterministically.
+2. **Configure environment:**
+   Create `.env` or `server/.env` with your Supabase credentials:
+   ```env
+   SUPABASE_URL=https://pftaapxjnmetzgqyxvwb.supabase.co
+   SUPABASE_ANON_KEY=your_publishable_key
+   SUPABASE_SECRET_KEY=your_secret_key
+   SUPABASE_BUCKET=compressed-files
+   PORT=5000
+   ```
 
----
+3. **Build and launch:**
+   ```powershell
+   npm --prefix client run build
+   node server/src/index.js
+   ```
 
-## 4. Custom `.cpx` Container Format Specification (Version 1)
-
-Every `.cpx` file is self-contained, portable, and validated with an explicit little-endian byte layout:
-
-| Byte Offset | Field Name | Data Type | Description |
-|---|---|---|---|
-| `0x00 - 0x03` | Magic Signature | 4 bytes | `0x43, 0x50, 0x58, 0x31` (`"CPX1"`) |
-| `0x04 - 0x05` | Format Version | uint16_t | Container version (`1`) |
-| `0x06` | Algorithm ID | uint8_t | `0`: Store, `1`: Huffman, `2`: RLE |
-| `0x07` | Flags | uint8_t | Bits 0..3: Valid bits in last payload byte |
-| `0x08 - 0x0F` | Original Size | uint64_t | Uncompressed byte count (little-endian) |
-| `0x10 - 0x2F` | Original SHA-256 | 32 bytes | Cryptographic hash of original uncompressed input |
-| `0x30 - 0x31` | Filename Length | uint16_t | Length of sanitized original filename |
-| `0x32 - ...` | Original Filename | UTF-8 String | Sanitized basename (path traversal protected) |
-| Next 4 bytes | Metadata Length | uint32_t | Length of algorithm metadata |
-| Variable | Tree Metadata | Bytes | Pre-order bitstream of Huffman binary tree |
-| Next 8 bytes | Payload Length | uint64_t | Size of compressed byte stream |
-| Variable | Encoded Payload | Bytes | Compressed bitstream / packet bytes |
-| Final 32 bytes | Trailer Checksum | 32 bytes | SHA-256 cryptographic hash over container |
+4. **Open in browser:**
+   ```
+   http://localhost:5000
+   ```
 
 ---
 
-## 5. Algorithmic Complexity
+## 5. Automated Test Suite (18/18 Passing)
 
-| Phase | Time Complexity | Auxiliary Space | Practical Notes |
-|---|---|---|---|
-| Byte Frequency Scan | $O(n)$ | $O(1)$ [256 counts] | Single linear pass over file bytes |
-| Min-Heap Construction | $O(k \log k)$ | $O(k)$ | Alphabet size $k \le 256$, max 255 merges |
-| Codebook Generation | $O(k)$ | $O(k)$ | Depth-first traversal of binary tree |
-| Huffman Bitstream Encoding | $O(n)$ | $O(n)$ | Fast array lookup per byte + bit shifting |
-| Huffman Bitstream Decoding | $O(n)$ | $O(n)$ | Bit-by-bit binary tree navigation to leaf |
-| RLE Compression / Decompression | $O(n)$ | $O(n)$ | Single pass run / literal chunking |
-| SHA-256 Integrity Hash | $O(n)$ | $O(1)$ | 64-byte block streaming hash |
-
----
-
-## 6. Automated QA Test Suite (18/18 Passing)
-
-The test runner (`bin/test_runner.exe`) executes 18 mandatory test cases covering every critical boundary condition:
+Run the native C++ QA test runner covering all edge cases:
+```powershell
+.\bin\test_runner.exe
+```
 
 - [x] **Test 1:** Empty input (0 bytes) roundtrip across all modes
 - [x] **Test 2:** Single-byte input roundtrip
@@ -147,54 +144,20 @@ The test runner (`bin/test_runner.exe`) executes 18 mandatory test cases coverin
 
 ---
 
-## 7. Setup and Execution Instructions
+## 6. REST API Reference
 
-### Prerequisites
-- **Node.js** v18+ (tested on Node.js v24.20)
-- **C++ Compiler:** MinGW-w64 (GCC / Clang) supporting C++17 (pre-compiled binary already in `bin/`)
-
-### Quick Start (Production Mode)
-
-1. **Launch the application:**
-   ```powershell
-   node server/src/index.js
-   ```
-
-2. Open your web browser:
-   ```
-   http://localhost:5000
-   ```
-   The backend serves both the API endpoints and the pre-built React production frontend directly!
-
-### Running the C++ Test Suite
-```powershell
-.\bin\test_runner.exe
-```
-
-### Development Mode (Concurrent Live Reload)
-1. **Start Backend Server:**
-   ```powershell
-   cd server
-   npm start
-   ```
-
-2. **Start Frontend Dev Server:**
-   ```powershell
-   cd client
-   npm run dev
-   ```
-   Navigate to `http://localhost:3000`.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/compress` | `POST` | Compresses uploaded files preserving format based on target percentage. |
+| `/api/auth/register` | `POST` | Registers a new user account. |
+| `/api/auth/login` | `POST` | Authenticates user and returns session token. |
+| `/api/jobs` | `GET` | Fetches authenticated user's private compression history. |
+| `/api/jobs/clear/all`| `DELETE` | Purges all history records and local artifacts for the user. |
+| `/api/jobs/:id` | `DELETE` | Deletes a single history job. |
+| `/api/files/:filename/download` | `GET` | Direct local/cloud download endpoint. |
+| `/api/health` | `GET` | Health endpoint verifying system and C++ engine status. |
 
 ---
 
-## 8. REST API Reference
-
-- `POST /api/compress` — Accepts multipart form-data with files and selected algorithm. Returns file metrics and download links.
-- `POST /api/decompress` — Accepts `.cpx` containers. Reconstructs files and validates SHA-256 hashes.
-- `POST /api/compare` — Benchmarks Huffman, RLE, Store, and Auto against the same input.
-- `POST /api/visualize` — Generates min-heap operation trace and binary tree hierarchy JSON.
-- `GET /api/stats/dashboard` — Returns aggregate telemetry, algorithm distribution, and volume trends.
-- `GET /api/jobs` — Queries persistent SQLite job audit logs (with search, filter, and pagination).
-- `GET /api/jobs/export/csv` — Exports complete job history to downloadable CSV format.
-- `GET /api/files/:filename/download` — Downloads compressed or recovered artifacts safely.
-- `GET /api/health` — Returns system status and verifies C++ engine availability.
+## License
+MIT License. Developed for universal high-efficiency file compression.
