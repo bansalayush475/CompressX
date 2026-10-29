@@ -13,6 +13,7 @@ import {
   Zap,
   Sliders,
   Flame,
+  Percent,
   Sparkles
 } from 'lucide-react';
 import { api } from './services/api';
@@ -24,9 +25,9 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Compression state - default to 'extreme' for extra small file size!
+  // Compression state with custom target percentage (default: 85%)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [strength, setStrength] = useState<string>('extreme');
+  const [targetPercent, setTargetPercent] = useState<number>(85);
   const [compressing, setCompressing] = useState(false);
   const [compressResult, setCompressResult] = useState<CompressionResultItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,13 +76,38 @@ export const App: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Calculate estimated target size based on selected file & percent
+  const getEstimatedSize = () => {
+    if (!selectedFile) return '0 B';
+    const remainingFraction = Math.max(0.04, (100 - targetPercent) / 100);
+    const estBytes = Math.round(selectedFile.size * remainingFraction);
+    return formatBytes(estBytes);
+  };
+
+  const getLevelLabel = (pct: number) => {
+    if (pct < 40) return 'Light';
+    if (pct < 60) return 'Balanced';
+    if (pct < 80) return 'High';
+    if (pct < 90) return 'Extra Small';
+    return 'Maximum Extreme';
+  };
+
+  const handlePercentInput = (val: string) => {
+    const num = parseInt(val, 10);
+    if (isNaN(num)) {
+      setTargetPercent(10);
+    } else {
+      setTargetPercent(Math.max(10, Math.min(95, num)));
+    }
+  };
+
   const handleCompress = async () => {
     if (!selectedFile) return;
     setCompressing(true);
     setCompressResult(null);
 
     try {
-      const res = await api.compressFiles([selectedFile], strength);
+      const res = await api.compressFiles([selectedFile], targetPercent);
       if (res.results.length > 0) {
         setCompressResult(res.results[0]);
       }
@@ -107,7 +133,6 @@ export const App: React.FC = () => {
       {/* Top Header */}
       <header className="h-16 border-b border-[#1c2030] bg-[#0f111a]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-6">
-          {/* Logo with Cyan-Emerald Gradient */}
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-500 to-emerald-400 flex items-center justify-center font-black text-black text-base shadow-md shadow-emerald-500/20">
               CX
@@ -182,7 +207,7 @@ export const App: React.FC = () => {
           <div className="space-y-6">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
-                <span>Compress File to Extra Small Size</span>
+                <span>Compress File Size</span>
               </h2>
               <p className="text-xs text-slate-400">
                 Reduces file size dramatically with the same format. No decompression needed to open!
@@ -218,64 +243,111 @@ export const App: React.FC = () => {
               </p>
             </div>
 
-            {/* Selected File & Compression Strength */}
+            {/* Selected File & Dynamic Level Bar / Percent Controls */}
             {selectedFile && (
-              <div className="bg-[#0f111a] border border-[#1c2030] rounded-2xl p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="bg-[#0f111a] border border-[#1c2030] rounded-2xl p-6 space-y-5 shadow-xl">
+                {/* Level Status & Target Estimation */}
+                <div className="flex items-center justify-between pb-1 border-b border-[#1c2030]/80">
                   <div className="flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-semibold text-white">Compression Level:</span>
+                    <span className="text-xs font-semibold text-white">
+                      Compression Intensity: <span className="text-emerald-400">{getLevelLabel(targetPercent)}</span>
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 bg-[#090a0f] p-1 rounded-xl border border-[#1c2030] text-xs">
-                    <button
-                      onClick={() => setStrength('normal')}
-                      className={`px-3 py-1.5 rounded-lg transition ${
-                        strength === 'normal'
-                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      Balanced
-                    </button>
-                    <button
-                      onClick={() => setStrength('high')}
-                      className={`px-3 py-1.5 rounded-lg transition ${
-                        strength === 'high'
-                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      High (-70%)
-                    </button>
-                    <button
-                      onClick={() => setStrength('extreme')}
-                      className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 ${
-                        strength === 'extreme'
-                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-bold shadow-lg shadow-emerald-500/20'
-                          : 'text-emerald-400 hover:text-white'
-                      }`}
-                    >
-                      <Flame className="w-3.5 h-3.5 fill-current" />
-                      <span>Extra Small (-90%+)</span>
-                    </button>
+                  <div className="text-right">
+                    <span className="text-[11px] text-slate-400 block">Estimated Size</span>
+                    <span className="text-xs font-bold font-mono text-emerald-400">
+                      ~{getEstimatedSize()} (-{targetPercent}%)
+                    </span>
                   </div>
                 </div>
 
+                {/* DYNAMIC PROGRESS / COMPRESSION BAR */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-slate-400">
+                    <span>Target Reduction:</span>
+                    <span className="font-mono font-bold text-white">{targetPercent}%</span>
+                  </div>
+                  <div className="h-3 w-full bg-[#090a0f] rounded-full overflow-hidden p-0.5 border border-[#1c2030] relative">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-teal-500 via-emerald-400 to-cyan-400 transition-all duration-300 shadow-md shadow-emerald-500/30"
+                      style={{ width: `${targetPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* TYPE PERCENT OPTION & SLIDER */}
+                <div className="flex items-center gap-4 bg-[#090a0f] p-3 rounded-2xl border border-[#1c2030]">
+                  <div className="flex-1 space-y-1">
+                    <span className="text-[11px] text-slate-400 block font-medium">Fine-tune Slider</span>
+                    <input
+                      type="range"
+                      min={15}
+                      max={95}
+                      step={1}
+                      value={targetPercent}
+                      onChange={(e) => setTargetPercent(Number(e.target.value))}
+                      className="w-full h-2 bg-[#1c2030] rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                    />
+                  </div>
+
+                  {/* Type Percent Direct Input Box */}
+                  <div className="shrink-0 flex items-center gap-1.5 bg-[#151824] px-3 py-1.5 rounded-xl border border-[#2a3147]">
+                    <span className="text-[11px] text-slate-400 font-medium">Type %:</span>
+                    <input
+                      type="number"
+                      min={10}
+                      max={95}
+                      value={targetPercent}
+                      onChange={(e) => handlePercentInput(e.target.value)}
+                      className="w-12 bg-transparent text-white font-mono font-bold text-xs text-center focus:outline-none"
+                    />
+                    <span className="text-xs font-bold text-emerald-400">%</span>
+                  </div>
+                </div>
+
+                {/* 5 Quick Level Buttons */}
+                <div className="grid grid-cols-5 gap-1.5 text-[11px]">
+                  {[
+                    { label: 'Light', pct: 30 },
+                    { label: 'Balanced', pct: 50 },
+                    { label: 'High', pct: 70 },
+                    { label: 'Extra Small', pct: 85 },
+                    { label: 'Maximum', pct: 95 }
+                  ].map((lvl) => (
+                    <button
+                      key={lvl.pct}
+                      onClick={() => setTargetPercent(lvl.pct)}
+                      className={`py-2 px-1 rounded-xl text-center transition font-medium border ${
+                        targetPercent === lvl.pct
+                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-bold border-transparent shadow-md shadow-emerald-500/20'
+                          : 'bg-[#090a0f] border-[#1c2030] text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="truncate">{lvl.label}</div>
+                      <div className="text-[10px] opacity-80">-{lvl.pct}%</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Synchronized Action Button */}
                 <button
                   onClick={handleCompress}
                   disabled={compressing}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
                 >
                   {compressing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                      <span>Optimizing with Extra Small Compression...</span>
+                      <span>Optimizing ({targetPercent}% target)...</span>
                     </>
                   ) : (
                     <>
                       <Zap className="w-4 h-4 fill-black" />
-                      <span>Compress to Extra Small Size</span>
+                      <span>
+                        Compress to -{targetPercent}% Smaller ({getLevelLabel(targetPercent)})
+                      </span>
                     </>
                   )}
                 </button>
@@ -301,7 +373,7 @@ export const App: React.FC = () => {
                   </div>
 
                   <div className="text-right">
-                    <span className="text-xs text-slate-400 block">Reduction</span>
+                    <span className="text-xs text-slate-400 block">Reduction Achieved</span>
                     <span className="text-sm font-bold text-emerald-400 font-mono">
                       -{compressResult.spaceSavedPercentage.toFixed(1)}%
                     </span>
@@ -314,7 +386,7 @@ export const App: React.FC = () => {
                     <span className="font-mono text-slate-300 font-medium">{formatBytes(compressResult.originalSize)}</span>
                   </div>
                   <div className="p-3 rounded-xl bg-[#090a0f] border border-[#1c2030]">
-                    <span className="text-slate-400 block mb-0.5">Extra Small Size</span>
+                    <span className="text-slate-400 block mb-0.5">Compressed Size</span>
                     <span className="font-mono text-emerald-400 font-bold">{formatBytes(compressResult.compressedSize)}</span>
                   </div>
                 </div>
@@ -326,7 +398,7 @@ export const App: React.FC = () => {
                   className="w-full py-4 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
                 >
                   <Download className="w-5 h-5" />
-                  <span>Download File ({compressResult.downloadFilename || compressResult.filename})</span>
+                  <span>Download Compressed File ({compressResult.downloadFilename || compressResult.filename})</span>
                 </a>
               </div>
             )}

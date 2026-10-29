@@ -62,10 +62,14 @@ export const api = {
     return res.json();
   },
 
-  async compressFiles(files: File[], algorithm: string): Promise<{ results: CompressionResultItem[] }> {
+  async compressFiles(files: File[], levelOrPercent: string | number = 80): Promise<{ results: CompressionResultItem[] }> {
     const formData = new FormData();
     files.forEach(f => formData.append('files', f));
-    formData.append('algorithm', algorithm);
+    if (typeof levelOrPercent === 'number' || !isNaN(Number(levelOrPercent))) {
+      formData.append('percent', String(levelOrPercent));
+    } else {
+      formData.append('strength', String(levelOrPercent));
+    }
 
     const res = await fetch(`${API_BASE}/compress`, {
       method: 'POST',

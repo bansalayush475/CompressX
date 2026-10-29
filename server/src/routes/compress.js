@@ -28,7 +28,10 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     const decoded = verifyToken(token);
     const userId = decoded ? decoded.id : 'guest';
 
-    const strength = (req.body.strength || req.body.algorithm || 'normal').toLowerCase();
+    const percent = req.body.percent !== undefined && req.body.percent !== '' 
+      ? Number(req.body.percent) 
+      : (req.body.strength || req.body.algorithm || 85);
+
     const results = [];
 
     for (const file of req.files) {
@@ -46,7 +49,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
           file.path,
           outputPath,
           file.originalname,
-          strength
+          percent
         );
 
         const durationMs = Date.now() - startTime;
