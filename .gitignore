@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build artifacts
+client/dist/
+bin/*.exe
+server/storage/uploads/*
+server/storage/outputs/*
+server/storage/temp/*
+!server/storage/uploads/.gitkeep
+!server/storage/outputs/.gitkeep
+!server/storage/temp/.gitkeep
+
+# Local database
+server/storage/*.db
+server/storage/*.db-journal
+
+# Environment variables
+.env
+server/.env
+
+# Temporary / OS files
+.DS_Store
+Thumbs.db
+*.log
+test_tmp/

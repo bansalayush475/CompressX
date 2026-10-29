@@ -1,0 +1,18 @@
+{
+  "name": "compressx-server",
+  "version": "1.0.0",
+  "description": "CompressX Backend Server",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "cors": "^2.8.5",
+    "dotenv": "^18.0.9",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.35.5"
+  }
+}
