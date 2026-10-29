@@ -11,10 +11,9 @@ import {
   LogOut,
   User,
   Zap,
-  ArrowRight,
   Sliders,
-  ExternalLink,
-  ShieldCheck
+  Flame,
+  Sparkles
 } from 'lucide-react';
 import { api } from './services/api';
 import { AuthModal } from './components/AuthModal';
@@ -25,9 +24,9 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Compression state
+  // Compression state - default to 'extreme' for extra small file size!
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [strength, setStrength] = useState<string>('normal');
+  const [strength, setStrength] = useState<string>('extreme');
   const [compressing, setCompressing] = useState(false);
   const [compressResult, setCompressResult] = useState<CompressionResultItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,7 +115,7 @@ export const App: React.FC = () => {
             <span className="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
               CompressX
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                Cloud
+                Ultra
               </span>
             </span>
           </div>
@@ -182,9 +181,11 @@ export const App: React.FC = () => {
         {activeTab === 'compress' && (
           <div className="space-y-6">
             <div className="text-center space-y-1">
-              <h2 className="text-2xl font-bold text-white tracking-tight">Compress File Size</h2>
+              <h2 className="text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
+                <span>Compress File to Extra Small Size</span>
+              </h2>
               <p className="text-xs text-slate-400">
-                Choose any file, reduce its size, and download the same file format ready to open.
+                Reduces file size dramatically with the same format. No decompression needed to open!
               </p>
             </div>
 
@@ -208,28 +209,28 @@ export const App: React.FC = () => {
                 <UploadCloud className="w-7 h-7" />
               </div>
               <p className="text-sm font-semibold text-white">
-                {selectedFile ? selectedFile.name : 'Click to choose file'}
+                {selectedFile ? selectedFile.name : 'Click to choose any file'}
               </p>
               <p className="text-xs text-slate-400 mt-1">
                 {selectedFile
                   ? `${formatBytes(selectedFile.size)} • Click to pick another file`
-                  : 'Images (JPG, PNG, WebP), PDFs, Documents, Code, or Text'}
+                  : 'Images (JPG, PNG, WebP), PDFs, Office Docs, Code, Text, or Data'}
               </p>
             </div>
 
             {/* Selected File & Compression Strength */}
             {selectedFile && (
               <div className="bg-[#0f111a] border border-[#1c2030] rounded-2xl p-5 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-semibold text-white">Compression Level</span>
+                    <span className="text-xs font-semibold text-white">Compression Level:</span>
                   </div>
 
                   <div className="flex items-center gap-1.5 bg-[#090a0f] p-1 rounded-xl border border-[#1c2030] text-xs">
                     <button
                       onClick={() => setStrength('normal')}
-                      className={`px-3 py-1 rounded-lg transition ${
+                      className={`px-3 py-1.5 rounded-lg transition ${
                         strength === 'normal'
                           ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow'
                           : 'text-slate-400 hover:text-white'
@@ -239,23 +240,24 @@ export const App: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setStrength('high')}
-                      className={`px-3 py-1 rounded-lg transition ${
+                      className={`px-3 py-1.5 rounded-lg transition ${
                         strength === 'high'
                           ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      High
+                      High (-70%)
                     </button>
                     <button
-                      onClick={() => setStrength('maximum')}
-                      className={`px-3 py-1 rounded-lg transition ${
-                        strength === 'maximum'
-                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow'
-                          : 'text-slate-400 hover:text-white'
+                      onClick={() => setStrength('extreme')}
+                      className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 ${
+                        strength === 'extreme'
+                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-bold shadow-lg shadow-emerald-500/20'
+                          : 'text-emerald-400 hover:text-white'
                       }`}
                     >
-                      Maximum
+                      <Flame className="w-3.5 h-3.5 fill-current" />
+                      <span>Extra Small (-90%+)</span>
                     </button>
                   </div>
                 </div>
@@ -268,12 +270,12 @@ export const App: React.FC = () => {
                   {compressing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                      <span>Optimizing & Compressing...</span>
+                      <span>Optimizing with Extra Small Compression...</span>
                     </>
                   ) : (
                     <>
                       <Zap className="w-4 h-4 fill-black" />
-                      <span>Compress & Reduce Size</span>
+                      <span>Compress to Extra Small Size</span>
                     </>
                   )}
                 </button>
@@ -312,7 +314,7 @@ export const App: React.FC = () => {
                     <span className="font-mono text-slate-300 font-medium">{formatBytes(compressResult.originalSize)}</span>
                   </div>
                   <div className="p-3 rounded-xl bg-[#090a0f] border border-[#1c2030]">
-                    <span className="text-slate-400 block mb-0.5">Compressed Size</span>
+                    <span className="text-slate-400 block mb-0.5">Extra Small Size</span>
                     <span className="font-mono text-emerald-400 font-bold">{formatBytes(compressResult.compressedSize)}</span>
                   </div>
                 </div>
@@ -324,7 +326,7 @@ export const App: React.FC = () => {
                   className="w-full py-4 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
                 >
                   <Download className="w-5 h-5" />
-                  <span>Download Compressed File ({compressResult.downloadFilename || compressResult.filename})</span>
+                  <span>Download File ({compressResult.downloadFilename || compressResult.filename})</span>
                 </a>
               </div>
             )}
