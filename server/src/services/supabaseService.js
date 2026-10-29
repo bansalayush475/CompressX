@@ -240,6 +240,39 @@ async function clearUserHistory(userId) {
   }
 }
 
+async function syncLocalJobsToSupabase() {
+  if (!isConfigured()) return { success: false, error: 'Supabase not configured' };
+  try {
+    const { db } = require('../db/database');
+    const jobs = db.prepare('SELECT * FROM jobs').all();
+    if (!jobs || jobs.length === 0) return { success: true, count: 0 };
+
+    let synced = 0;
+    for (const job of jobs) {
+      const ext = path.extname(job.original_filename);
+      const downloadFilename = `${path.basename(job.original_filename, ext)}_compressed${ext}`;
+      const localDownloadUrl = `/api/files/${job.id}_compressed${ext}/download?downloadName=${encodeURIComponent(downloadFilename)}`;
+
+      const res = await insertHistoryRow({
+        id: job.id,
+        user_id: job.user_id,
+        original_filename: job.original_filename,
+        result_size: job.result_size,
+        original_size: job.original_size,
+        space_saved: job.space_saved,
+        space_saved_percentage: job.space_saved_percentage,
+        algorithm: job.algorithm,
+        file_url: job.artifact_path?.startsWith('http') ? job.artifact_path : localDownloadUrl,
+        created_at: job.created_at
+      });
+      if (res) synced++;
+    }
+    return { success: true, count: synced };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   isConfigured,
   getConfig,
@@ -249,5 +282,6 @@ module.exports = {
   insertHistoryRow,
   getUserHistory,
   deleteHistoryRow,
-  clearUserHistory
+  clearUserHistory,
+  syncLocalJobsToSupabase
 };

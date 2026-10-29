@@ -50,4 +50,9 @@ CREATE POLICY "Public Read/Write Access" ON history FOR ALL USING (true) WITH CH
   res.type('text/plain').send(sql);
 });
 
+router.post('/sync', async (req, res) => {
+  const result = await supabaseService.syncLocalJobsToSupabase();
+  res.json(result);
+});
+
 module.exports = router;
