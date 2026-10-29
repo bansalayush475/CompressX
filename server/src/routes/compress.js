@@ -8,9 +8,18 @@ const { compressFileDirect } = require('../services/directCompressor');
 const { insertJob } = require('../db/database');
 const { verifyToken } = require('./auth');
 const supabaseService = require('../services/supabaseService');
+const os = require('os');
 
-const uploadsDir = path.join(__dirname, '..', '..', 'storage', 'uploads');
-const outputsDir = path.join(__dirname, '..', '..', 'storage', 'outputs');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const baseStorageDir = isVercel
+  ? path.join(os.tmpdir(), 'compressx')
+  : path.join(__dirname, '..', '..', 'storage');
+
+const uploadsDir = path.join(baseStorageDir, 'uploads');
+const outputsDir = path.join(baseStorageDir, 'outputs');
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(outputsDir)) fs.mkdirSync(outputsDir, { recursive: true });
 
 const upload = multer({
   dest: uploadsDir,

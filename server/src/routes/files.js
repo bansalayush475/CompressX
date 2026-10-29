@@ -2,8 +2,13 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
-const outputsDir = path.resolve(__dirname, '..', '..', 'storage', 'outputs');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const baseStorageDir = isVercel
+  ? path.join(os.tmpdir(), 'compressx')
+  : path.resolve(__dirname, '..', '..', 'storage');
+const outputsDir = path.join(baseStorageDir, 'outputs');
 
 router.get('/:filename/download', (req, res) => {
   // Prevent path traversal

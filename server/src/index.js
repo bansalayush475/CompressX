@@ -2,15 +2,21 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Ensure storage directories exist
+// Ensure storage directories exist (use os.tmpdir() for Vercel/serverless environments)
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const baseStorageDir = isVercel
+  ? path.join(os.tmpdir(), 'compressx')
+  : path.join(__dirname, '..', 'storage');
+
 const storageDirs = [
-  path.join(__dirname, '..', 'storage', 'uploads'),
-  path.join(__dirname, '..', 'storage', 'outputs'),
-  path.join(__dirname, '..', 'storage', 'temp')
+  path.join(baseStorageDir, 'uploads'),
+  path.join(baseStorageDir, 'outputs'),
+  path.join(baseStorageDir, 'temp')
 ];
 for (const dir of storageDirs) {
   if (!fs.existsSync(dir)) {
@@ -64,7 +70,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`[CompressX Backend] Listening on http://localhost:${PORT}`);
-  console.log(`[CompressX Engine] Verified at: ${path.resolve(__dirname, '..', '..', 'bin', 'compressx.exe')}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`[CompressX Backend] Listening on http://localhost:${PORT}`);
+    console.log(`[CompressX Engine] Verified at: ${path.resolve(__dirname, '..', '..', 'bin', 'compressx.exe')}`);
+  });
+}
+
+module.exports = app;

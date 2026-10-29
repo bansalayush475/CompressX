@@ -1,9 +1,14 @@
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
 
-const dbDir = path.join(__dirname, '..', '..', 'storage');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const dbDir = isVercel
+  ? path.join(os.tmpdir(), 'compressx')
+  : path.join(__dirname, '..', '..', 'storage');
+
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
