@@ -92,13 +92,36 @@ async function signIn(emailOrUsername, password) {
 
 /**
  * Upload compressed file to Supabase Storage Bucket ('compressed-files')
+ * Saves file in folder titled by user_id for clean admin organization.
  */
-async function uploadToStorage(filePath, filename, mimeType = 'application/octet-stream') {
+async function uploadToStorage(filePath, filename, userId = 'guest', customMimeType = null) {
   if (!isConfigured()) return null;
 
   try {
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.avif': 'image/avif',
+      '.gif': 'image/gif',
+      '.pdf': 'application/pdf',
+      '.zip': 'application/zip',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.json': 'application/json',
+      '.txt': 'text/plain',
+      '.csv': 'text/csv'
+    };
+
+    const mimeType = customMimeType || mimeTypes[ext] || 'application/octet-stream';
     const fileBuffer = fs.readFileSync(filePath);
-    const storagePath = `${Date.now()}_${path.basename(filename)}`;
+
+    // Save in user's specific folder in admin Supabase Storage
+    const cleanUserId = userId ? String(userId).trim().replace(/[^a-zA-Z0-9_\-]/g, '_') : 'guest';
+    const storagePath = `${cleanUserId}/${Date.now()}_${path.basename(filename)}`;
 
     const { data, error } = await supabase.storage
       .from(supabaseBucket)

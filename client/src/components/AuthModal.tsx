@@ -60,8 +60,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </h3>
           <p className="text-xs text-slate-400">
             {isRegister
-              ? 'Sign up to sync your compression history to Supabase'
-              : 'Sign in to access your cloud-saved compressed files'}
+              ? 'Create an account to save and access your compressed files'
+              : 'Sign in to access your saved files and history'}
           </p>
         </div>
 
@@ -106,9 +106,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 mt-2"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 mt-2 cursor-pointer"
           >
-            {loading ? 'Please wait...' : isRegister ? 'Sign Up with Supabase' : 'Sign In'}
+            {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
           </button>
         </form>
 

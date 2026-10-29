@@ -54,10 +54,10 @@ router.post('/', upload.array('files', 10), async (req, res) => {
 
         const durationMs = Date.now() - startTime;
 
-        // 1. Try uploading to Supabase Storage
+        // 1. Try uploading to Supabase Storage under user_id folder
         let cloudUrl = null;
         if (supabaseService.isConfigured()) {
-          cloudUrl = await supabaseService.uploadToStorage(outputPath, downloadFilename);
+          cloudUrl = await supabaseService.uploadToStorage(outputPath, downloadFilename, userId);
         }
 
         const localDownloadUrl = `/api/files/${outputFilename}/download?downloadName=${encodeURIComponent(downloadFilename)}`;
