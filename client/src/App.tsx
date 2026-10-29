@@ -14,7 +14,13 @@ import {
   Sliders,
   Flame,
   Percent,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon,
+  File,
+  X,
+  ArrowRight,
+  ShieldCheck,
+  RefreshCw
 } from 'lucide-react';
 import { api } from './services/api';
 import { AuthModal } from './components/AuthModal';
@@ -30,6 +36,7 @@ export const App: React.FC = () => {
   const [targetPercent, setTargetPercent] = useState<number>(85);
   const [compressing, setCompressing] = useState(false);
   const [compressResult, setCompressResult] = useState<CompressionResultItem | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // History state
@@ -89,7 +96,7 @@ export const App: React.FC = () => {
     if (pct < 60) return 'Balanced';
     if (pct < 80) return 'High';
     if (pct < 90) return 'Extra Small';
-    return 'Maximum Extreme';
+    return 'Maximum';
   };
 
   const handlePercentInput = (val: string) => {
@@ -128,61 +135,113 @@ export const App: React.FC = () => {
     }
   };
 
+  // Helper for file type info
+  const getFileInfo = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'avif'].includes(ext)) {
+      return { icon: ImageIcon, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', label: `${ext.toUpperCase()} Image` };
+    }
+    if (['pdf'].includes(ext)) {
+      return { icon: FileText, color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', label: 'PDF Document' };
+    }
+    if (['docx', 'xlsx', 'pptx', 'doc', 'xls'].includes(ext)) {
+      return { icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', label: `${ext.toUpperCase()} Document` };
+    }
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+      return { icon: Archive, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', label: `${ext.toUpperCase()} Archive` };
+    }
+    return { icon: File, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', label: `${ext.toUpperCase() || 'DATA'} File` };
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setSelectedFile(e.dataTransfer.files[0]);
+      setCompressResult(null);
+    }
+  };
+
+  // Preset compression tiers
+  const presetTiers = [
+    { label: 'Light', pct: 30, hint: 'High Quality', desc: 'Minimal loss' },
+    { label: 'Balanced', pct: 50, hint: 'Standard', desc: 'Best balance' },
+    { label: 'High', pct: 70, hint: 'Web Optimized', desc: 'Fast sharing' },
+    { label: 'Extra Small', pct: 85, hint: 'Ultra Compact', desc: 'Max savings' },
+    { label: 'Maximum', pct: 95, hint: 'Aggressive', desc: 'Smallest size' }
+  ];
+
   return (
-    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex flex-col antialiased selection:bg-teal-500 selection:text-black">
+    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col antialiased selection:bg-teal-500 selection:text-black">
       {/* Top Header */}
-      <header className="h-16 border-b border-[#1c2030] bg-[#0f111a]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+      <header className="h-16 border-b border-[#171b26] bg-[#0c0e17]/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-500 to-emerald-400 flex items-center justify-center font-black text-black text-base shadow-md shadow-emerald-500/20">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-teal-400 to-emerald-400 flex items-center justify-center font-black text-black text-sm shadow-md shadow-emerald-500/25">
               CX
             </div>
-            <span className="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
-              CompressX
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                Ultra
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-bold text-base tracking-tight text-white">CompressX</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider font-mono">
+                PRO
               </span>
-            </span>
+            </div>
           </div>
 
-          {/* Tab Switcher */}
-          <nav className="flex items-center p-1 rounded-xl bg-[#090a0f] border border-[#1c2030] text-xs font-medium">
+          {/* Navigation Switcher */}
+          <nav className="flex items-center p-1 rounded-xl bg-[#090a10] border border-[#171b26] text-xs font-medium">
             <button
               onClick={() => setActiveTab('compress')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg transition ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
                 activeTab === 'compress'
-                  ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow-sm shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Archive className="w-3.5 h-3.5" />
-              <span>Compress File</span>
+              <span>Compress</span>
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg transition ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
                 activeTab === 'history'
-                  ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-semibold shadow-sm shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <History className="w-3.5 h-3.5" />
               <span>History</span>
+              {jobs.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
+                  {jobs.length}
+                </span>
+              )}
             </button>
           </nav>
         </div>
 
         {/* User Account / Login */}
-        <div>
+        <div className="flex items-center gap-3">
           {user ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#151824] border border-[#2a3147] text-xs">
-                <User className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="font-medium text-white">{user.username}</span>
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#121622] border border-[#212638] text-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-medium text-slate-200 max-w-[120px] truncate">{user.username}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-[#151824] transition"
+                className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-[#121622] transition border border-transparent hover:border-red-500/20"
                 title="Log out"
               >
                 <LogOut className="w-4 h-4" />
@@ -191,96 +250,176 @@ export const App: React.FC = () => {
           ) : (
             <button
               onClick={() => setAuthModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Login / Sign Up</span>
+              <span>Sign In</span>
             </button>
           )}
         </div>
       </header>
 
       {/* Main Workspace */}
-      <main className="flex-1 max-w-2xl w-full mx-auto p-6 md:p-10 flex flex-col justify-center">
+      <main className="flex-1 max-w-2xl w-full mx-auto p-5 md:p-8 flex flex-col justify-center">
         {/* COMPRESS WORKSPACE */}
         {activeTab === 'compress' && (
           <div className="space-y-6">
-            <div className="text-center space-y-1">
-              <h2 className="text-2xl font-bold text-white tracking-tight flex items-center justify-center gap-2">
-                <span>Compress File Size</span>
+            {/* Header Titles */}
+            <div className="text-center space-y-1.5">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                Universal File Compression
               </h2>
               <p className="text-xs text-slate-400">
-                Reduces file size dramatically with the same format. No decompression needed to open!
+                Compress files directly while preserving the original format. Ready to open instantly!
               </p>
             </div>
 
-            {/* File Dropzone */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-[#1c2030] hover:border-emerald-500/50 bg-[#0f111a]/80 hover:bg-[#151824] rounded-3xl p-8 text-center cursor-pointer transition-all shadow-sm"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setSelectedFile(e.target.files[0]);
-                    setCompressResult(null);
-                  }
-                }}
-                className="hidden"
-              />
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-3 border border-emerald-500/20 shadow-inner">
-                <UploadCloud className="w-7 h-7" />
+            {/* Dropzone OR Selected File View */}
+            {!selectedFile ? (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-200 ${
+                  isDragging
+                    ? 'border-emerald-400 bg-emerald-500/10 scale-[1.01]'
+                    : 'border-[#1e2434] hover:border-emerald-500/40 bg-[#0c0e17]/80 hover:bg-[#101320]'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSelectedFile(e.target.files[0]);
+                      setCompressResult(null);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-3.5 border border-emerald-500/20 shadow-inner">
+                  <UploadCloud className="w-7 h-7" />
+                </div>
+                <h3 className="text-sm font-semibold text-white">
+                  Drop your file here, or <span className="text-emerald-400 underline underline-offset-2">browse</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Supports Images (PNG, JPG, WebP), PDFs, Office Docs (DOCX, PPTX), Code & Text
+                </p>
+
+                <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t border-[#171b26]/70 text-[11px] text-slate-500">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Format-preserving • Instant direct download • Zero decompression needed</span>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-white">
-                {selectedFile ? selectedFile.name : 'Click to choose any file'}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {selectedFile
-                  ? `${formatBytes(selectedFile.size)} • Click to pick another file`
-                  : 'Images (JPG, PNG, WebP), PDFs, Office Docs, Code, Text, or Data'}
-              </p>
-            </div>
+            ) : (
+              /* Selected File Card */
+              <div className="bg-[#0c0e17] border border-[#1e2434] rounded-2xl p-4 flex items-center justify-between gap-4 shadow-lg">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {(() => {
+                    const info = getFileInfo(selectedFile.name);
+                    const IconComponent = info.icon;
+                    return (
+                      <div className={`w-11 h-11 rounded-xl ${info.bg} ${info.border} border flex items-center justify-center shrink-0`}>
+                        <IconComponent className={`w-5 h-5 ${info.color}`} />
+                      </div>
+                    );
+                  })()}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-white text-sm truncate max-w-[280px] md:max-w-[340px]">
+                        {selectedFile.name}
+                      </h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono shrink-0">
+                        {getFileInfo(selectedFile.name).label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Original size: <span className="font-mono text-slate-300 font-medium">{formatBytes(selectedFile.size)}</span>
+                    </p>
+                  </div>
+                </div>
 
-            {/* Selected File & Dynamic Level Bar / Percent Controls */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-1.5 rounded-lg bg-[#141824] hover:bg-[#1a2030] text-slate-300 hover:text-white text-xs font-medium border border-[#212638] transition"
+                  >
+                    Change
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setCompressResult(null);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-[#141824] transition"
+                    title="Remove file"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setSelectedFile(e.target.files[0]);
+                        setCompressResult(null);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Compression Settings Panel (Unified Slider & Preset Chips) */}
             {selectedFile && (
-              <div className="bg-[#0f111a] border border-[#1c2030] rounded-2xl p-6 space-y-5 shadow-xl">
-                {/* Level Status & Target Estimation */}
-                <div className="flex items-center justify-between pb-1 border-b border-[#1c2030]/80">
-                  <div className="flex items-center gap-2">
+              <div className="bg-[#0c0e17] border border-[#1e2434] rounded-3xl p-6 space-y-6 shadow-xl">
+                {/* 1. Header with Status & Estimated Reduction */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#171b26]">
+                  <div className="flex items-center gap-2.5">
                     <Sliders className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-semibold text-white">
-                      Compression Intensity: <span className="text-emerald-400">{getLevelLabel(targetPercent)}</span>
-                    </span>
+                    <div>
+                      <span className="text-xs font-semibold text-white block">
+                        Target Compression Level
+                      </span>
+                      <span className="text-[11px] text-emerald-400 font-medium">
+                        {getLevelLabel(targetPercent)} Intensity (-{targetPercent}% reduction target)
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="text-right">
-                    <span className="text-[11px] text-slate-400 block">Estimated Size</span>
-                    <span className="text-xs font-bold font-mono text-emerald-400">
-                      ~{getEstimatedSize()} (-{targetPercent}%)
-                    </span>
+                  <div className="flex items-center gap-3 self-end sm:self-auto">
+                    {/* Live Size Pill */}
+                    <div className="px-3 py-1.5 rounded-xl bg-[#121622] border border-[#212638] text-right">
+                      <span className="text-[10px] text-slate-400 block uppercase tracking-wider font-mono">
+                        Estimated Size
+                      </span>
+                      <span className="text-xs font-bold font-mono text-emerald-400">
+                        ~{getEstimatedSize()} <span className="text-slate-400 font-normal">(-{targetPercent}%)</span>
+                      </span>
+                    </div>
+
+                    {/* Direct Percent Type Box */}
+                    <div className="flex items-center gap-1 bg-[#121622] px-2.5 py-1.5 rounded-xl border border-[#212638]">
+                      <span className="text-[11px] text-slate-400 font-medium">Type:</span>
+                      <input
+                        type="number"
+                        min={10}
+                        max={95}
+                        value={targetPercent}
+                        onChange={(e) => handlePercentInput(e.target.value)}
+                        className="w-9 bg-transparent text-white font-mono font-bold text-xs text-center focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded"
+                      />
+                      <span className="text-xs font-bold text-emerald-400">%</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* DYNAMIC PROGRESS / COMPRESSION BAR */}
+                {/* 2. UNIFIED INTERACTIVE SLIDER (Eliminates the duplicate target line!) */}
                 <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>Target Reduction:</span>
-                    <span className="font-mono font-bold text-white">{targetPercent}%</span>
-                  </div>
-                  <div className="h-3 w-full bg-[#090a0f] rounded-full overflow-hidden p-0.5 border border-[#1c2030] relative">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-teal-500 via-emerald-400 to-cyan-400 transition-all duration-300 shadow-md shadow-emerald-500/30"
-                      style={{ width: `${targetPercent}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* TYPE PERCENT OPTION & SLIDER */}
-                <div className="flex items-center gap-4 bg-[#090a0f] p-3 rounded-2xl border border-[#1c2030]">
-                  <div className="flex-1 space-y-1">
-                    <span className="text-[11px] text-slate-400 block font-medium">Fine-tune Slider</span>
+                  <div className="relative flex items-center">
                     <input
                       type="range"
                       min={15}
@@ -288,65 +427,81 @@ export const App: React.FC = () => {
                       step={1}
                       value={targetPercent}
                       onChange={(e) => setTargetPercent(Number(e.target.value))}
-                      className="w-full h-2 bg-[#1c2030] rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                      className="cx-slider w-full"
+                      style={{
+                        background: `linear-gradient(to right, #10b981 0%, #06b6d4 ${targetPercent}%, #171c28 ${targetPercent}%, #171c28 100%)`
+                      }}
                     />
                   </div>
 
-                  {/* Type Percent Direct Input Box */}
-                  <div className="shrink-0 flex items-center gap-1.5 bg-[#151824] px-3 py-1.5 rounded-xl border border-[#2a3147]">
-                    <span className="text-[11px] text-slate-400 font-medium">Type %:</span>
-                    <input
-                      type="number"
-                      min={10}
-                      max={95}
-                      value={targetPercent}
-                      onChange={(e) => handlePercentInput(e.target.value)}
-                      className="w-12 bg-transparent text-white font-mono font-bold text-xs text-center focus:outline-none"
-                    />
-                    <span className="text-xs font-bold text-emerald-400">%</span>
+                  {/* Slider Percentage Scale Marks */}
+                  <div className="flex justify-between text-[11px] text-slate-500 font-mono px-1">
+                    {[15, 30, 50, 70, 85, 95].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => setTargetPercent(val)}
+                        className={`transition hover:text-emerald-400 ${
+                          Math.abs(targetPercent - val) <= 5 ? 'text-emerald-400 font-bold' : ''
+                        }`}
+                      >
+                        {val}%
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* 5 Quick Level Buttons */}
-                <div className="grid grid-cols-5 gap-1.5 text-[11px]">
-                  {[
-                    { label: 'Light', pct: 30 },
-                    { label: 'Balanced', pct: 50 },
-                    { label: 'High', pct: 70 },
-                    { label: 'Extra Small', pct: 85 },
-                    { label: 'Maximum', pct: 95 }
-                  ].map((lvl) => (
-                    <button
-                      key={lvl.pct}
-                      onClick={() => setTargetPercent(lvl.pct)}
-                      className={`py-2 px-1 rounded-xl text-center transition font-medium border ${
-                        targetPercent === lvl.pct
-                          ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-black font-bold border-transparent shadow-md shadow-emerald-500/20'
-                          : 'bg-[#090a0f] border-[#1c2030] text-slate-400 hover:text-white hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="truncate">{lvl.label}</div>
-                      <div className="text-[10px] opacity-80">-{lvl.pct}%</div>
-                    </button>
-                  ))}
+                {/* 3. Preset Level Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {presetTiers.map((tier) => {
+                    const isActive = targetPercent === tier.pct;
+                    return (
+                      <button
+                        key={tier.pct}
+                        onClick={() => setTargetPercent(tier.pct)}
+                        className={`p-3 rounded-2xl text-left transition-all border flex flex-col justify-between ${
+                          isActive
+                            ? 'bg-gradient-to-b from-[#142325] to-[#0d161a] border-emerald-500/60 shadow-md shadow-emerald-500/10'
+                            : 'bg-[#090a10] border-[#171b26] hover:border-[#2a3245] hover:bg-[#10131d]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-bold ${isActive ? 'text-emerald-300' : 'text-slate-200'}`}>
+                            {tier.label}
+                          </span>
+                          <span
+                            className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                              isActive
+                                ? 'bg-emerald-500 text-black'
+                                : 'bg-[#141824] text-slate-400'
+                            }`}
+                          >
+                            -{tier.pct}%
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-2 block">
+                          {tier.hint}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Synchronized Action Button */}
+                {/* 4. Action Compress Button */}
                 <button
                   onClick={handleCompress}
                   disabled={compressing}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 via-emerald-400 to-emerald-500 hover:from-teal-400 hover:to-emerald-300 text-black font-extrabold text-sm transition-all shadow-lg shadow-emerald-500/25 disabled:opacity-50 flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   {compressing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                      <span>Optimizing ({targetPercent}% target)...</span>
+                      <span>Optimizing Stream (-{targetPercent}% Target)...</span>
                     </>
                   ) : (
                     <>
-                      <Zap className="w-4 h-4 fill-black" />
+                      <Zap className="w-4 h-4 fill-black group-hover:scale-110 transition-transform" />
                       <span>
-                        Compress to -{targetPercent}% Smaller ({getLevelLabel(targetPercent)})
+                        Compress to ~{getEstimatedSize()} (-{targetPercent}% {getLevelLabel(targetPercent)})
                       </span>
                     </>
                   )}
@@ -354,17 +509,18 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            {/* Direct Download Card */}
+            {/* Direct Download Result Card */}
             {compressResult && compressResult.success && (
-              <div className="bg-[#0f111a] border border-emerald-500/40 rounded-3xl p-6 space-y-5 shadow-2xl animate-in fade-in">
-                <div className="flex items-center justify-between">
+              <div className="bg-[#0c0e17] border border-emerald-500/40 rounded-3xl p-6 space-y-5 shadow-2xl animate-in fade-in">
+                {/* Result Status Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-[#171b26]">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
-                      <CheckCircle2 className="w-6 h-6" />
+                    <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <CheckCircle2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-white text-base">
-                        {compressResult.downloadFilename || compressResult.filename}
+                      <h4 className="font-bold text-white text-sm">
+                        Compression Completed Successfully
                       </h4>
                       <p className="text-xs text-slate-400">
                         {compressResult.algorithm} • {compressResult.durationMs} ms
@@ -373,33 +529,54 @@ export const App: React.FC = () => {
                   </div>
 
                   <div className="text-right">
-                    <span className="text-xs text-slate-400 block">Reduction Achieved</span>
-                    <span className="text-sm font-bold text-emerald-400 font-mono">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-mono">
+                      Reduction Saved
+                    </span>
+                    <span className="text-base font-extrabold text-emerald-400 font-mono">
                       -{compressResult.spaceSavedPercentage.toFixed(1)}%
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-[#090a0f] border border-[#1c2030]">
-                    <span className="text-slate-400 block mb-0.5">Original Size</span>
-                    <span className="font-mono text-slate-300 font-medium">{formatBytes(compressResult.originalSize)}</span>
+                {/* Before / After Comparison */}
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 rounded-2xl bg-[#090a10] border border-[#171b26]">
+                    <span className="text-slate-400 block text-[11px] mb-0.5">Original</span>
+                    <span className="font-mono text-slate-300 font-semibold">{formatBytes(compressResult.originalSize)}</span>
                   </div>
-                  <div className="p-3 rounded-xl bg-[#090a0f] border border-[#1c2030]">
-                    <span className="text-slate-400 block mb-0.5">Compressed Size</span>
+                  <div className="p-3 rounded-2xl bg-[#090a10] border border-[#171b26]">
+                    <span className="text-slate-400 block text-[11px] mb-0.5">Compressed</span>
                     <span className="font-mono text-emerald-400 font-bold">{formatBytes(compressResult.compressedSize)}</span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-[#090a10] border border-emerald-500/20 bg-emerald-500/5">
+                    <span className="text-emerald-400/80 block text-[11px] mb-0.5">Total Saved</span>
+                    <span className="font-mono text-emerald-400 font-bold">{formatBytes(compressResult.spaceSaved)}</span>
                   </div>
                 </div>
 
-                {/* Big Direct Download Button */}
-                <a
-                  href={compressResult.downloadUrl}
-                  download
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>Download Compressed File ({compressResult.downloadFilename || compressResult.filename})</span>
-                </a>
+                {/* Primary Download CTA */}
+                <div className="space-y-2">
+                  <a
+                    href={compressResult.downloadUrl}
+                    download
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-teal-500 via-emerald-400 to-emerald-500 hover:from-teal-400 hover:to-emerald-300 text-black font-extrabold text-sm transition-all shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2.5"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span>Download {compressResult.downloadFilename || compressResult.filename}</span>
+                  </a>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 px-1">
+                    <span className="flex items-center gap-1.5 text-emerald-400">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Same format openable directly</span>
+                    </span>
+                    {compressResult.cloudUrl && (
+                      <span className="text-emerald-400/90 font-medium">
+                        ✓ Saved to Supabase Cloud
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -410,9 +587,16 @@ export const App: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">Your Compressed Files</h2>
-                <p className="text-xs text-slate-400">Stored in Supabase cloud and ready for instant download.</p>
+                <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Your Compressed Files</h2>
+                <p className="text-xs text-slate-400">Files stored in Supabase cloud and ready for instant download.</p>
               </div>
+              <button
+                onClick={loadHistory}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#121622] hover:bg-[#1a2030] text-slate-300 text-xs border border-[#212638] transition"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh</span>
+              </button>
             </div>
 
             {loadingHistory ? (
@@ -421,7 +605,7 @@ export const App: React.FC = () => {
                 <span className="text-xs text-slate-400">Loading history...</span>
               </div>
             ) : jobs.length === 0 ? (
-              <div className="text-center py-12 bg-[#0f111a]/50 border border-dashed border-[#1c2030] rounded-3xl p-8 space-y-3">
+              <div className="text-center py-12 bg-[#0c0e17] border border-dashed border-[#1e2434] rounded-3xl p-8 space-y-3">
                 <FileText className="w-8 h-8 text-slate-600 mx-auto" />
                 <p className="text-sm font-semibold text-slate-300">No compressed files yet</p>
                 <p className="text-xs text-slate-500">Compress your first file to see it here.</p>
@@ -441,24 +625,26 @@ export const App: React.FC = () => {
                   const dlUrl = job.artifact_path?.startsWith('http')
                     ? job.artifact_path
                     : `/api/files/${job.id}_compressed${ext}/download?downloadName=${encodeURIComponent(dlName)}`;
+                  const info = getFileInfo(job.original_filename);
+                  const IconComp = info.icon;
 
                   return (
                     <div
                       key={job.id}
-                      className="p-4 rounded-2xl bg-[#0f111a] border border-[#1c2030] flex items-center justify-between gap-4 hover:border-emerald-500/40 transition"
+                      className="p-4 rounded-2xl bg-[#0c0e17] border border-[#1e2434] flex items-center justify-between gap-4 hover:border-emerald-500/40 transition shadow-sm"
                     >
-                      <div className="flex items-center gap-3 truncate">
-                        <div className="p-2.5 rounded-xl bg-[#151824] text-emerald-400 shrink-0">
-                          <FileText className="w-4 h-4" />
+                      <div className="flex items-center gap-3.5 truncate">
+                        <div className={`w-10 h-10 rounded-xl ${info.bg} ${info.border} border flex items-center justify-center shrink-0`}>
+                          <IconComp className={`w-4 h-4 ${info.color}`} />
                         </div>
                         <div className="truncate">
                           <h4 className="text-sm font-semibold text-white truncate max-w-xs md:max-w-md">
                             {job.original_filename}
                           </h4>
-                          <p className="text-xs text-slate-400">
-                            {formatBytes(job.original_size)} → <span className="text-emerald-400 font-medium">{formatBytes(job.result_size)}</span>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {formatBytes(job.original_size)} → <span className="text-emerald-400 font-semibold">{formatBytes(job.result_size)}</span>
                             {job.space_saved > 0 && (
-                              <span className="text-emerald-400 font-medium ml-1">
+                              <span className="text-emerald-400 font-semibold ml-1.5">
                                 (-{job.space_saved_percentage.toFixed(0)}%)
                               </span>
                             )}{' '}
@@ -473,14 +659,14 @@ export const App: React.FC = () => {
                           download
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-semibold transition"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black text-xs font-bold transition shadow-sm shadow-emerald-500/20"
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>Download</span>
                         </a>
                         <button
                           onClick={() => handleDeleteJob(job.id)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 transition"
+                          className="p-1.5 rounded-xl text-slate-500 hover:text-red-400 hover:bg-[#141824] transition"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />

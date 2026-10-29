@@ -54,6 +54,8 @@ export interface CompressionResultItem {
   originalSha256?: string;
   containerSha256?: string;
   downloadUrl: string;
+  cloudUrl?: string;
+  storagePath?: string;
   success: boolean;
   errorMessage?: string;
 }
@@ -68,6 +70,8 @@ export interface DecompressionResultItem {
   recoveredSha256: string;
   checksumVerified: boolean;
   downloadUrl: string;
+  cloudUrl?: string;
+  storagePath?: string;
   success: boolean;
   errorMessage?: string;
 }
