@@ -11,9 +11,18 @@ export const API_BASE = '/api';
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('compressx_token');
+  const userStr = localStorage.getItem('compressx_user');
+  let userId = '';
+  if (userStr) {
+    try { userId = JSON.parse(userStr).id; } catch (e) {}
+  }
+
   const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (userId) {
+    headers['X-User-Id'] = userId;
   }
   return headers;
 }

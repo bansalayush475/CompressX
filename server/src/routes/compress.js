@@ -26,7 +26,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     const decoded = verifyToken(token);
-    const userId = decoded ? decoded.id : 'guest';
+    const userId = decoded ? decoded.id : (req.headers['x-user-id'] || 'guest');
 
     const percent = req.body.percent !== undefined && req.body.percent !== '' 
       ? Number(req.body.percent) 

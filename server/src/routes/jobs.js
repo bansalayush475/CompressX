@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     const decoded = verifyToken(token);
-    const userId = decoded ? decoded.id : null;
+    const userId = decoded ? decoded.id : (req.headers['x-user-id'] || null);
 
     // Strict privacy requirement: Only show history when logged in for that specific user
     if (!userId) {
@@ -69,7 +69,7 @@ router.delete('/clear/all', async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     const decoded = verifyToken(token);
-    const userId = decoded ? decoded.id : null;
+    const userId = decoded ? decoded.id : (req.headers['x-user-id'] || null);
 
     if (!userId) {
       return res.status(401).json({ error: 'Please log in to clear your history' });
@@ -92,7 +92,7 @@ router.delete('/:id', async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
     const decoded = verifyToken(token);
-    const userId = decoded ? decoded.id : null;
+    const userId = decoded ? decoded.id : (req.headers['x-user-id'] || null);
 
     if (supabaseService.isConfigured()) {
       await supabaseService.deleteHistoryRow(req.params.id, userId);

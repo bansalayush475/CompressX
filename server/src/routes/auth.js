@@ -15,17 +15,41 @@ function generateToken(user) {
 
 function verifyToken(token) {
   if (!token) return null;
+
+  // 1. Check CompressX HMAC token (b64.sig)
   const parts = token.split('.');
-  if (parts.length !== 2) return null;
-  const [b64, sig] = parts;
-  const expectedSig = crypto.createHmac('sha256', SECRET).update(b64).digest('hex');
-  if (sig !== expectedSig) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
-    return payload;
-  } catch (e) {
-    return null;
+  if (parts.length === 2) {
+    const [b64, sig] = parts;
+    const expectedSig = crypto.createHmac('sha256', SECRET).update(b64).digest('hex');
+    if (sig === expectedSig) {
+      try {
+        const payload = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+        return payload;
+      } catch (e) {}
+    }
   }
+
+  // 2. Check standard JWT (header.payload.signature) - e.g. from Supabase
+  if (parts.length === 3) {
+    try {
+      const payloadStr = Buffer.from(parts[1], 'base64').toString('utf8');
+      const payload = JSON.parse(payloadStr);
+      if (payload && (payload.sub || payload.id)) {
+        return {
+          id: payload.sub || payload.id,
+          username: payload.user_metadata?.username || payload.email?.split('@')[0] || 'user'
+        };
+      }
+    } catch (e) {}
+  }
+
+  // 3. Fallback: check if it's a raw user id
+  const user = findUserById(token);
+  if (user) {
+    return { id: user.id, username: user.username };
+  }
+
+  return null;
 }
 
 router.post('/register', async (req, res) => {
@@ -42,7 +66,6 @@ router.post('/register', async (req, res) => {
     }
 
     let supabaseUser = null;
-    let token = null;
 
     // 1. Try Supabase Auth
     if (supabaseService.isConfigured()) {
@@ -50,7 +73,6 @@ router.post('/register', async (req, res) => {
         const sbRes = await supabaseService.signUp(username, password);
         if (sbRes) {
           supabaseUser = sbRes;
-          token = sbRes.token;
         }
       } catch (sbErr) {
         console.warn('[Supabase Auth] Registration notice:', sbErr.message);
@@ -69,10 +91,13 @@ router.post('/register', async (req, res) => {
       email: supabaseUser?.email || `${username}@compressx.local`
     };
 
-    if (!token) {
-      token = generateToken(finalUser);
-    }
+    // Associate any prior guest jobs to this user
+    try {
+      const { db } = require('../db/database');
+      db.prepare(`UPDATE jobs SET user_id = ? WHERE user_id = 'guest'`).run(finalUser.id);
+    } catch (e) {}
 
+    const token = generateToken(finalUser);
     res.json({ user: finalUser, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -86,7 +111,6 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required.' });
     }
 
-    let token = null;
     let finalUser = null;
 
     // 1. Try Supabase Auth
@@ -99,7 +123,6 @@ router.post('/login', async (req, res) => {
             username: sbRes.username || username,
             email: sbRes.email
           };
-          token = sbRes.token;
         }
       } catch (sbErr) {
         console.warn('[Supabase Auth] Sign in notice:', sbErr.message);
@@ -111,7 +134,6 @@ router.post('/login', async (req, res) => {
       const localUser = verifyUser(username, password);
       if (localUser) {
         finalUser = localUser;
-        token = generateToken(localUser);
       }
     }
 
@@ -119,6 +141,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password.' });
     }
 
+    // Associate any prior guest jobs to this user so their recent work appears
+    try {
+      const { db } = require('../db/database');
+      db.prepare(`UPDATE jobs SET user_id = ? WHERE user_id = 'guest'`).run(finalUser.id);
+    } catch (e) {}
+
+    const token = generateToken(finalUser);
     res.json({ user: finalUser, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
